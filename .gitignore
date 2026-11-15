@@ -5,3 +5,6 @@ __pycache__/
 # full flash dumps hold the Bluetooth pairing keys
 backups/*/flash_full.bin
 backups/*/get_bonds.txt
+
+# brag video (not committed)
+brag/

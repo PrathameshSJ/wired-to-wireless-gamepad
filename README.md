@@ -1,152 +1,275 @@
-# Quantum Pad
+# Wired to Wireless Gamepad
 
-A dead Quantum Hi-Tech USB gamepad converted into a Bluetooth LE controller with an
-ESP32-C3 SuperMini. It shows up as **"PSJ CUSTOM"** but uses the Xbox Series X|S
-IDs and report layout (`045E:0B13`), so Android, Windows, iOS and Linux treat it as an
-Xbox controller with no setup.
+How to turn a cheap wired USB gamepad (the generic PS2-style pads sold everywhere under
+dozens of brand names) into a Bluetooth controller that phones, PCs and tablets recognise
+as an Xbox controller, using an ESP32-C3 SuperMini and two shift registers.
 
-## Hardware
+The pad's original electronics are bypassed completely. Only the shell, the button
+membranes, the D-pad, the shoulder buttons and the analog sticks are reused. Everything
+else is new, so the method works on almost any pad of this type, even a dead one.
 
-| Part | Notes |
-|---|---|
-| ESP32-C3 SuperMini | the brain |
-| 2× 74HC165 (daisy-chained) | 16 buttons. **HC, not LS**: 74LS165 is 5 V TTL and reads every button as pressed at 3.3 V |
-| 16× 10 kΩ pull-downs | buttons are active-high: button common goes to 3.3 V |
-| TP4056 + LiPo | charging. **Battery switch OFF while USB is plugged in** |
+![Finished internals](media/photos/14_final-assembly-wiring.jpg)
 
-### Pins
+The build log with photos and videos of the original conversion is in
+[JOURNEY.md](JOURNEY.md).
+
+## What you get
+
+- Bluetooth LE controller that appears as an **Xbox Series X|S controller** (`045E:0B13`):
+  Android, Windows, Linux and iOS map every button with no drivers or setup.
+- 16 buttons, two analog sticks, a Mode/Guide button and full-press digital triggers.
+- Trusted-device pairing: the pad only reconnects to devices you paired, and a button
+  combination opens pairing for a new device.
+- Optional wired mode over USB on Linux (through a small helper program).
+- A browser-based tester and calibration wizard that maps your buttons and measures your
+  sticks, so you can wire the buttons in any order.
+- Rechargeable LiPo battery with USB-C charging.
+
+## How it works
+
+Cheap pads put a single epoxy-covered chip (the black blob) on the main board. Each
+button is a pair of interleaved copper fingers, shorted by a carbon pill on the rubber
+membrane when pressed. One finger of every button connects to a shared "common" trace,
+the other to its own trace leading to the chip.
+
+The conversion cuts the chip out of the circuit and reads the button traces directly:
+
+```
+ button pads ──┬── 10 kΩ pull-down ── GND
+               │
+         74HC165 ×2 (16 inputs, daisy-chained)
+               │  LOAD / CLK / DATA
+         ESP32-C3 SuperMini ── Bluetooth LE ── phone / PC
+               │  ADC
+          analog sticks (potentiometers on 3.3 V)
+```
+
+The button common is connected to 3.3 V, so a pressed button reads high. Two 74HC165
+parallel-to-serial shift registers turn 16 buttons into three wires. The sticks are
+plain potentiometers read by the ESP32's ADC. The ESP32-C3 runs the firmware in
+`quantum_pad/`, which presents a standard Bluetooth HID gamepad.
+
+## Parts
+
+| Part | Qty | Notes |
+|---|---|---|
+| Wired gamepad | 1 | Any PS2-style USB pad with analog sticks. A dead one is fine. |
+| ESP32-C3 SuperMini | 1 | Small ESP32-C3 board with USB-C and Bluetooth LE |
+| 74HC165 shift register (DIP-16) | 2 | Must be **HC**: LS and HCT parts are 5 V logic. See the warning below. |
+| 10 kΩ resistor | 16 | Pull-downs, one per button |
+| 100 nF ceramic capacitor | 2 | Decoupling, one per shift register |
+| Perfboard | 1 | About 10 × 9 holes is enough for both chips |
+| TP4056 USB-C charger module | 1 | The version with battery protection |
+| 3.7 V LiPo cell | 1 | 500–1000 mAh, whatever fits the shell (this build used a 523450, 1000 mAh) |
+| Slide switch | 1 | Battery on/off |
+| Thin hook-up wire | | 28–30 AWG; ribbon cable strands work well |
+
+> **Use 74HC165, not 74LS165.** The LS part is a 5 V TTL chip. At 3.3 V it reads every
+> input as pressed. This build started with GD74LS165 chips and had to be redone.
+
+Tools: soldering iron with a fine tip, flux, a multimeter with continuity beep, a sharp
+hobby knife for cutting traces, and flush cutters.
+
+## Step 1: Open the pad and map the board
+
+1. Remove the screws (some hide under labels) and lift out the main board, the
+   shoulder-button boards and the stick board.
+2. Locate the epoxy blob chip and the cable pads (usually marked `V`, `+`, `-`, `G`).
+3. With the multimeter in continuity mode, find the **common** trace: it touches one
+   finger of every button. Some boards have two or three separate commons (for example,
+   the D-pad on its own common). Note them all.
+4. For each button, follow its other finger to the trace that runs to the chip.
+
+![Original board](media/photos/01_original-board-epoxy-chip.jpg)
+
+## Step 2: Isolate the buttons from the old chip
+
+The old chip must not drive or load the button traces.
+
+- Cut each button trace near the chip with a hobby knife and check with the meter that
+  it no longer connects. Alternatively, cut the traces feeding power to the chip.
+- Cut every common away from the old circuit, so the commons only connect to buttons.
+- Scrape a little solder mask off each button trace (or use the existing vias and
+  test pads) and solder a wire to it. Label the wires as you go.
+
+![Wires on button pads](media/photos/06_button-board-wired.jpg)
+
+## Step 3: Build the shift-register board
+
+Wire both 74HC165s on the perfboard:
+
+| 74HC165 pin | Name | Connect to |
+|---|---|---|
+| 16 | VCC | 3.3 V, plus a 100 nF capacitor to GND right at the pin |
+| 8 | GND | GND |
+| 15 | CLK INH | GND |
+| 1 | SH/LD | ESP32 GPIO5 (both chips) |
+| 2 | CLK | ESP32 GPIO6 (both chips) |
+| 9 | QH | Chip 1: ESP32 GPIO7. Chip 2: chip 1 pin 10 (SER) |
+| 10 | SER | Chip 1: chip 2 pin 9. Chip 2: GND |
+| 11–14, 3–6 | A–H | Button wires, each with a 10 kΩ resistor to GND |
+
+The order of the buttons on the inputs does not matter. The calibration wizard
+detects which input is which button.
+
+An interactive 3D view of this build's perfboard layout is in
+[`tools/perfboard_10x9.html`](tools/perfboard_10x9.html) (open it in a browser).
+
+![Shift-register board](media/photos/13_shift-register-board-bottom.jpg)
+
+## Step 4: Wire the ESP32-C3 SuperMini
 
 | GPIO | Use |
 |---|---|
-| 0 / 1 | left stick X / Y |
-| 4 / 3 | right stick X / Y |
-| 5 | 74HC165 LOAD |
+| 0 / 1 | Left stick X / Y (potentiometer wipers) |
+| 4 / 3 | Right stick X / Y |
+| 5 | 74HC165 SH/LD |
 | 6 | 74HC165 CLK |
-| 7 | DATA (chip 1 QH) |
-| 20 | Mode button, wired straight to GND (internal pull-up) |
-| 10 | optional strong pull-up for a leaky Mode pad (220 Ω to GPIO20); unused now |
+| 7 | 74HC165 QH of chip 1 |
+| 20 | Mode button, wired between GPIO20 and GND (internal pull-up) |
+| 3V3 | Button commons, shift registers, stick potentiometers |
 
-Avoid GPIO 2, 8 and 9 (strapping pins): a stick on GPIO2 once forced download-mode boot.
-Stick pots must be fed from 3.3 V, never 5 V.
+- **Do not use GPIO 2, 8 or 9 for inputs.** They are strapping pins. A stick wired to
+  GPIO2 once forced the board into download mode at power-on.
+- **Feed the stick potentiometers from the 3V3 pin only**, never 5 V. The ADC tolerates
+  at most 3.3 V. If the sticks read a narrow range, check that their supply really is
+  3.3 V: this build initially got only 1.8 V through a bad joint.
+- Connect every button common to 3V3.
 
-Shift chain: chip 2 QH → chip 1 SER, chip 1 QH → GPIO7.
-Chip 1 A–H = Up, Down, Left, Right, Select, Start, L3, R3.
-Chip 2 A–H = △, ○, ✕, □, L1, R1, L2, R2.
-3D board layout: open `tools/perfboard_10x9.html` in a browser.
+## Step 5: Power
 
-## Folders
+```
+LiPo ── TP4056 (B+ / B-)        TP4056 OUT+ ── slide switch ── SuperMini 5V pin
+                                TP4056 OUT- ── SuperMini GND
+```
 
-| Path | What |
-|---|---|
-| `quantum_pad/` | the firmware |
-| `tools/live.py` + `live.html` | live input tester and calibration wizard |
-| `tools/perfboard_10x9.html` | 3D perfboard / wiring diagram (`perfboard_old.html` = earlier layout) |
-| `tools/mon.py`, `tools/record.py` | serial capture / record button activity |
-| `diagnostics/` | bench sketches: shift-register diag, pin wiggle for the multimeter, stick test |
-| `backups/` | earlier firmware + saved calibrations, each with notes |
+The SuperMini's regulator makes 3.3 V from the battery. Charge through the TP4056's
+USB-C port. When you plug the SuperMini's own USB port in for flashing or wired play,
+**switch the battery off**, so USB power does not back-feed the battery.
 
-## Build and flash
+Fit everything back into the shell. Route wires away from screw posts: a wire
+pinched under a screw while closing the shell is the most likely way to lose a button.
 
-Needs `arduino-cli` with the `esp32:esp32` core, plus the libraries
-**ESP32-BLE-Gamepad 0.8.0** and **NimBLE-Arduino 2.5.1**.
+## Step 6: Flash the firmware
+
+Install [arduino-cli](https://arduino.github.io/arduino-cli/), the `esp32:esp32` board
+core, and the libraries **ESP32-BLE-Gamepad 0.8.0** and **NimBLE-Arduino 2.5.1**. Then:
 
 ```sh
-sudo setfacl -m u:$USER:rw /dev/ttyACM0      # if you're not in the uucp group
 FQBN=esp32:esp32:esp32c3:CDCOnBoot=cdc
 arduino-cli compile --fqbn $FQBN quantum_pad
 arduino-cli upload  --fqbn $FQBN -p /dev/ttyACM0 quantum_pad
 ```
 
-Flashing keeps the calibration: it lives in NVS flash and survives reflashing as long
-as `CFG_VER` in the firmware doesn't change.
+On Linux, if the port is not accessible, add yourself to the `uucp` (Arch) or `dialout`
+(Debian/Ubuntu) group.
 
-## Calibrating
+To rename the controller, change `PAD_NAME` in `quantum_pad/quantum_pad.ino`.
+
+## Step 7: Calibrate
 
 ```sh
 python3 tools/live.py        # then open http://localhost:8765
 ```
 
-Run the wizard over **USB** (battery OFF): it maps every button, measures the stick
-ranges and centres, sets the deadzone and saves it all onto the pad. Without USB the page
-still shows live input over Bluetooth, but it can't save.
+With the pad connected over USB and the battery switched off, the wizard asks you to
+press each button in turn, sweep both sticks and leave them centred. It then saves the
+button map, stick ranges, centres and deadzone to the pad's flash. The calibration
+survives reflashing.
 
-The serial commands behind it (`GET`, `MAP`, `CAL`, `DZ`, `INV`, `MODEPOL`, `SWAP`,
-`PROBE`, `SAVE`, `DEFAULTS`) are documented at the top of `quantum_pad/quantum_pad.ino`.
+Once you are happy with a calibration, you can copy the values printed by the `GET`
+command into `DEFAULT_MAP`, `DEFAULT_MIN/CTR/MAX` and `DEFAULT_SWAP` in the firmware, so
+that a wiped pad still works.
 
-## Behaviour
+## Using the controller
 
-- **Buttons:** Xbox layout by position (south = A, east = B, west = X, north = Y),
-  L1/R1 = bumpers, L2/R2 = full-press triggers, Select = View, Start = Menu.
-- **Xbox/Guide button:** Mode, or hold L3 + R3 for 1 second.
-- **Stuck inputs:** any input that reads pressed at power-on is ignored until it has
-  been released once.
-- **Disabling a broken channel:** set bits in `DISABLED_RAW` in the firmware
-  (bit n = wizard bar n+1). `MODE_DISABLED` does the same for Mode. Both are off now.
+### Buttons
 
-## Bluetooth
+- Xbox layout by position: bottom face button = A, right = B, left = X, top = Y.
+- L1/R1 = bumpers, L2/R2 = full-press triggers, Select = View, Start = Menu.
+- Mode = Xbox/Guide button. Holding L3 + R3 for one second also sends Guide.
 
-### Link modes
+### Connection modes
 
-| Mode | How | What it does | Blue LED |
-|---|---|---|---|
-| **Trusted** | every power-on | Hidden from scan lists. Only saved devices can connect; anything else is dropped and not saved | short blip every 2 s while waiting, off when connected |
-| **Pairing** | hold **L1 + R1 + Mode for 3 s** | Drops the current device, advertises from a private address made with a fresh key each time (saved devices can't recognise it, so they don't keep retrying), shows up in scan lists (and Windows' Swift Pair popup), saves whatever pairs | fast blink, slower once something has paired |
+Hold **L1 + R1 + Mode for 3 seconds** to step to the next mode.
 
-| **Wired** | power on from a computer's USB, or the combo from Pairing while on USB | Bluetooth off. Input goes over the USB cable through `tools/usb_pad.py` (see below) | steady on |
+| Mode | Behaviour | Blue LED |
+|---|---|---|
+| Trusted | Default on battery. Hidden from scans; only paired devices can connect. | Short blink every 2 s while waiting, off when connected |
+| Pairing | Disconnects the current device and becomes discoverable. Any device can pair. Windows shows a Swift Pair pop-up. | Fast blink |
+| Wired | Default when powered on from a computer. Bluetooth off; input goes over USB. | Steady |
 
-The combo (**L1 + R1 + Mode, 3 s**) steps through the modes:
-- **on USB:** Wired → Trusted → Pairing → Wired …
-- **on battery:** Trusted ↔ Pairing
+- On battery the combination toggles Trusted and Pairing. On USB it cycles
+  Wired, Trusted, Pairing.
+- Plugging in USB while the pad is already running does not change the mode, so you
+  can charge mid-game and stay on Bluetooth.
+- The pad remembers up to three devices. Pairing a fourth replaces the oldest.
+- Pairing mode returns to Trusted after three minutes with nothing connected.
+- To re-pair a device the pad has forgotten, first remove the pad from that device's
+  Bluetooth settings.
 
-Power-on picks the start mode: plugged into a computer = **Wired**, otherwise **Trusted**
-(a phone charger counts as battery). Plugging USB in while the pad is already on changes
-nothing, so you can top up mid-game and stay on Bluetooth. Pulling the cable while
-**Wired** drops to **Trusted** after 1.5 s.
+### Wired mode (Linux)
 
-- Hold the combo again to go back to **Trusted**, now with the new device trusted. Devices
-  that pair learn the pad's real address during pairing, so they reconnect to it afterwards.
-- To re-pair a device the pad has forgotten, remove the pad on that device first, or it
-  keeps trying the old keys.
-- Pairing mode switches back to Trusted by itself after 3 minutes with nothing connected.
-- The pad saves up to **3 devices**; pairing a 4th replaces the oldest.
-- It connects to one device at a time.
-- Serial commands: `PAIR`, `TRUST`, `BONDS` (list saved devices), `FORGET` (delete them all).
-- **Windows** shows a "connect?" popup (Swift Pair) while the pad is in pairing mode.
-- **Android's** earbud-style popup (Google Fast Pair) needs a model registered with Google,
-  so it isn't implemented.
-- The device name (`PAD_NAME` in the firmware) travels in the scan response: it doesn't fit
-  in the 31-byte advertising packet next to the other fields, and without a name Android hides the pad from its
-  pairing list.
-- After changing the name or IDs, remove and re-pair the pad on Linux. If the old name
-  sticks, fix `Name=` in `/var/lib/bluetooth/<adapter>/cache/<pad MAC>` and restart
-  `bluetooth`.
-
-### Wired mode (`tools/usb_pad.py`)
-
-The C3's USB port can only be a serial port, never a USB gamepad (that needs an ESP32-S2/S3).
-In Wired mode the pad streams `G <buttons> <lx> <ly> <rx> <ry> <lt> <rt>` lines over
-serial, and the helper turns them into a virtual **Xbox 360 pad** (uinput, Linux only):
+The ESP32-C3's USB port is a fixed serial interface and cannot act as a USB gamepad
+(that needs an ESP32-S2 or S3). In Wired mode the pad streams its state over serial and
+a helper turns it into a virtual Xbox 360 controller:
 
 ```sh
-python3 tools/usb_pad.py              # --bt-off: force Wired on connect, --invert-y: flip sticks
+python3 tools/usb_pad.py            # options: --bt-off, --invert-y
 ```
 
-While it runs, type `o` + Enter for Bluetooth off (Wired), `t` for Trusted, `p` for
-Pairing, `s` for status. Needs python-evdev and the `input` group. Don't run it together
-with `tools/live.py` (same serial port).
+While it runs, type `o` (Bluetooth off, wired), `t` (trusted), `p` (pairing) or `s`
+(status) followed by Enter. The helper needs python-evdev and write access to
+`/dev/uinput` (the `input` group). Do not run it together with `tools/live.py`, since
+both use the same serial port.
 
-## Calibration in the firmware
+## Troubleshooting
 
-The wizard calibration from 2026-11-14 is also the firmware's built-in default
-(`DEFAULT_MAP`, `DEFAULT_MIN/CTR/MAX`, `DEFAULT_SWAP`), so `DEFAULTS` or a wiped flash still
-gives a working pad. After recalibrating, copy the new `GET` values there too.
+| Symptom | Likely cause |
+|---|---|
+| Every button reads pressed | 74LS165 instead of 74HC165, or the shift registers have no 3.3 V supply |
+| A button flickers on its own | Its 10 kΩ pull-down is missing or has a cold joint, leaving the input floating |
+| A button never registers | Broken wire, often pinched when closing the shell. Check continuity from the pad to the 74HC165 pin. |
+| Mode button always pressed | The carbon pad leaks to the old circuit. Cut it free and wire it directly between GPIO20 and GND. |
+| Stick range is small or offset | Potentiometers not fed from 3.3 V, or X/Y wires swapped (the wizard detects swaps) |
+| Board boots into download mode | Something pulls a strapping pin (GPIO 2, 8 or 9) at power-on |
+| Pad does not appear on a phone | It is in Trusted mode. Use the combination to enter Pairing mode. |
+| A phone keeps reconnecting and dropping | The phone holds an old pairing. Remove the pad on the phone and pair again. |
 
-## To do
+## Firmware serial commands
 
-- D-pad Up doesn't work: no input is mapped to it, and raw input 12 (wizard bar 13) is
-  unassigned. Check that button's wire to chip 2 pin 14, then rerun the wizard.
+Over USB at 115200 baud: `GET`, `MAP`, `CAL`, `DZ`, `INV`, `MODEPOL`, `SWAP`, `PROBE`,
+`SAVE`, `DEFAULTS`, `PAIR`, `TRUST`, `WIRED`, `BONDS`, `FORGET`. They are documented at
+the top of `quantum_pad/quantum_pad.ino`.
 
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `quantum_pad/` | Firmware |
+| `tools/live.py`, `tools/live.html` | Live tester and calibration wizard |
+| `tools/usb_pad.py` | Wired-mode helper for Linux |
+| `tools/perfboard_10x9.html` | 3D perfboard and wiring diagram (`perfboard_old.html` is an earlier layout) |
+| `tools/mon.py`, `tools/record.py` | Serial monitor and button-activity recorder |
+| `diagnostics/` | Bench sketches: shift-register test, pin toggler for the multimeter, stick test |
+| `backups/` | Earlier firmware versions and saved calibrations |
+| `media/` | Build photos and videos |
+| `JOURNEY.md` | Build log |
+
+## Known limitations
+
+- Triggers are digital (the original pad's L2/R2 are plain buttons).
+- The rumble motor is not driven.
+- Wired mode works on Linux only, through the helper.
+- Google Fast Pair is not supported (it needs a model registered with Google).
+
+## License
+
+[MIT No Attribution](LICENSE): use, modify and share it for anything, including
+commercially. Credit is appreciated but not required.
 
 ## Credits
 
-Firmware, tools and docs written with the help of [Claude](https://claude.com/claude-code) (Anthropic) via Claude Code.
+Built by [PrathameshSJ](https://github.com/PrathameshSJ). Firmware, tools and
+documentation written with the help of [Claude](https://claude.com/claude-code)
+(Anthropic) via Claude Code.
