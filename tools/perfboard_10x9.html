@@ -1,0 +1,478 @@
+<title>Pad Shift Board 10×9</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one wide board diagram with a tap-to-inspect panel, then build steps and wiring tables underneath. */
+:root{
+  --bg:#eceee9; --fg:#1b221e; --muted:#58635d; --panel:#fbfcfa; --line:#d0d6cf; --accent:#0d7656; --warn:#b23a22;
+  --board:#c09257; --board-edge:#8f6634; --pad:#d7955a; --pad-dim:#c98b52; --hole:#2b1a0b; --silk:#fff4df;
+  --solder:#cfd3d8; --chip:#202125; --chip-fg:#e2e2e2; --resbody:#d9c7a0;
+  --n-gnd:#151515; --n-v33:#e0352b; --n-load:#f08a1c; --n-clk:#e9c419; --n-data:#26a24a;
+  --n-chain:#2f7de1; --n-mode:#a157d6; --n-btn:#1fb7b7; --n-nc:#8a8a8a;
+  --f-disp:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121614; --fg:#e3e8e4; --muted:#9aa59f; --panel:#1a201d; --line:#2d3531; --accent:#4ccf9f; --warn:#ff7a5c;
+  --board:#a77a45; --board-edge:#6f4d24; --pad:#c98a50; --pad-dim:#b37b47; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121614; --fg:#e3e8e4; --muted:#9aa59f; --panel:#1a201d; --line:#2d3531; --accent:#4ccf9f; --warn:#ff7a5c;
+  --board:#a77a45; --board-edge:#6f4d24; --pad:#c98a50; --pad-dim:#b37b47; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:36px}
+h1,h2{font-family:var(--f-disp);font-weight:700;letter-spacing:.01em;text-wrap:balance;margin:0;line-height:1.05}
+h1{font-size:clamp(2rem,5vw,3rem)}
+h2{font-size:1.7rem}
+p{margin:0}
+.sub{color:var(--muted);margin-top:6px;font-size:1.05rem}
+.specs{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.spec{font-family:var(--f-mono);font-size:.82rem;border:1px solid var(--line);border-radius:4px;padding:3px 8px;background:var(--panel)}
+code,.ref{font-family:var(--f-mono);font-size:.86em;background:color-mix(in srgb,var(--accent) 12%,transparent);padding:1px 5px;border-radius:3px;white-space:nowrap}
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel)}
+.seg button{font:600 .95rem var(--f-body);color:var(--fg);background:transparent;border:0;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--bg)}
+.seg button:focus-visible,.legend button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.legend button{display:inline-flex;align-items:center;gap:6px;font:600 .82rem var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 6px;cursor:pointer}
+.legend button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.sw{width:12px;height:12px;border-radius:50%;border:1px solid color-mix(in srgb,var(--fg) 30%,transparent)}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start;margin-top:14px}
+@media (max-width:900px){.stage{grid-template-columns:minmax(0,1fr)}}
+.svgbox{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.svgbox svg{display:block;width:100%;min-width:760px;height:auto}
+#box3{border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+#c3{touch-action:none;cursor:grab;min-height:360px}
+#c3 canvas{display:block;width:100%}
+.cam{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px;border-top:1px solid var(--line)}
+.cam button{font:600 .85rem var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:5px 10px;cursor:pointer}
+.cam label{margin-left:auto;font-size:.9rem;display:flex;gap:6px;align-items:center}
+#msg3{padding:10px;color:var(--muted)}
+.hint{color:var(--muted);font-size:.9rem;margin-top:8px}
+#info{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:10px;min-width:0}
+#info .where{font-family:var(--f-mono);font-weight:600;font-size:1.05rem}
+#info ul{margin:0;padding-left:18px;display:grid;gap:4px}
+#info .net{display:flex;gap:8px;align-items:center;font-weight:700}
+#info .desc{color:var(--muted);font-size:.95rem}
+.key{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 24px;margin-top:14px}
+.key div{display:flex;gap:10px;align-items:center;font-size:.95rem}
+.key svg{flex:none}
+ol.steps{margin:14px 0 0;padding:0;list-style:none;counter-reset:s;display:grid;gap:14px}
+ol.steps>li{counter-increment:s;display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:start}
+ol.steps>li::before{content:counter(s);font:700 1.5rem var(--f-disp);color:var(--accent);border:2px solid var(--accent);border-radius:50%;width:38px;height:38px;display:grid;place-items:center}
+ol.steps b{display:block;font-size:1.05rem}
+ol.steps li.check::before{background:var(--accent);color:var(--bg)}
+.tag{font:700 .72rem var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-left:6px}
+.warn{color:var(--warn);font-weight:600}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px}
+.tbl{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th{font:600 .78rem var(--f-body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+ul.parts{margin:12px 0 0;padding-left:20px;display:grid;gap:4px}
+.note{border-left:3px solid var(--accent);padding:4px 0 4px 14px;color:var(--muted)}
+svg text{font-family:var(--f-body)}
+@media (prefers-reduced-motion:no-preference){.glow{animation:pulse 1.4s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.45}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Pad shift-register board · 10 × 9</h1>
+    <p class="sub">Everything on a 10 × 9 offcut. The chips sit on top. All 16 pull-downs and both caps stand on the underside. Their top legs are joined by one bare wire in the air, and that wire is ground. Button wires don't get holes: they're soldered flat onto the chip-leg pads.</p>
+    <div class="specs">
+      <span class="spec">10 × 9 holes ≈ 25 × 23 mm</span>
+      <span class="spec">≈ 18 mm thick (parts on both sides)</span>
+      <span class="spec">2 × 74HC165</span>
+      <span class="spec">16 × 10k</span>
+      <span class="spec">2 × 10 µF</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="bar">
+      <div class="seg" role="group" aria-label="Board side">
+        <button id="vTop" aria-pressed="false">Top · chip side</button>
+        <button id="vBot" aria-pressed="true">Bottom · solder side (flipped)</button>
+        <button id="v3D" aria-pressed="false">3D</button>
+      </div>
+      <div class="legend" id="legend" aria-label="Highlight a connection"></div>
+    </div>
+    <div class="stage">
+      <div>
+        <div class="svgbox"><svg id="board" role="img" aria-label="10 by 9 perfboard layout"></svg></div>
+        <div id="box3" hidden><div id="msg3"></div><div id="c3"></div><div class="cam"><button data-cam="angle">Angle</button><button data-cam="top">Top</button><button data-cam="bottom">Bottom</button><button data-cam="side">Side</button><label><input type="checkbox" id="lab3" checked> Labels</label></div></div>
+        <p class="hint">Most of the work is on the underside, so the bottom view opens first. Tap a hole for details. In 3D, drag to rotate, pinch or scroll to zoom, and right-drag or two-finger drag to pan. <span class="ref">c4 r2</span> means column 4, row 2, counted from the top-left in the top view.</p>
+      </div>
+      <aside id="info" aria-live="polite"></aside>
+    </div>
+    <div class="key">
+      <div><svg width="46" height="18"><line x1="6" y1="9" x2="40" y2="9" stroke="var(--solder)" stroke-width="9" stroke-linecap="round"/></svg>Solder bridge between neighbouring pads</div>
+      <div><svg width="46" height="18"><circle cx="23" cy="9" r="7" fill="var(--resbody)" stroke="#8a7650"/><circle cx="23" cy="9" r="2" fill="#555"/></svg>Part standing on the underside</div>
+      <div><svg width="46" height="18"><line x1="4" y1="9" x2="42" y2="9" stroke="#7c838b" stroke-width="5" stroke-dasharray="7 4"/></svg>Air bus: bare wire across the part tops (ground)</div>
+      <div><svg width="46" height="18"><path d="M4 14 Q23 -2 42 14" fill="none" stroke="var(--n-load)" stroke-width="4"/></svg>Insulated jumper wire</div>
+      <div><svg width="46" height="18"><rect x="16" y="2" width="14" height="14" fill="none" stroke="var(--n-btn)" stroke-width="3"/></svg>Wire soldered flat onto this pad (no hole)</div>
+      <div><svg width="46" height="18"><circle cx="23" cy="9" r="7" fill="none" stroke="var(--n-v33)" stroke-width="3"/></svg>Wire goes through this hole</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>How this fits</h2>
+    <p class="note" style="margin-top:12px">Each pull-down needs a spot right next to its chip leg. On top, the only free holes are the outer columns and the gap row. Underneath, though, the holes under each chip body are free. So every resistor stands on its pad under the chip, with its short leg bridged to the chip leg beside it. That's 16 resistors in four rows of four, one hole apart. Their tall legs all bend into one bare wire, and that wire is ground. The price is thickness and fiddly soldering. Test before the chips go in.</p>
+  </section>
+
+  <section>
+    <h2>Build order</h2>
+    <ol class="steps">
+      <li><div><b>Mark the board</b>Hold it 10 holes wide and 9 tall. Put a marker dot by the top-left hole (<span class="ref">c1 r1</span>) on both sides. When flipped, it's top-right.</div></li>
+      <li><div><b>Sockets first, on top</b>U1 in <span class="ref">c2–c9</span> with legs in <span class="ref">r1</span> and <span class="ref">r4</span>. U2 in <span class="ref">c2–c9</span> with legs in <span class="ref">r6</span> and <span class="ref">r9</span>. Both notches face column 1. Row 5 stays empty as the gap. Solder all legs before anything goes underneath.</div></li>
+      <li><div><b>3.3 V pads</b>Underneath, bridge <span class="ref">c1 r1–r3</span> together and onto <span class="ref">c2 r1</span> (U1 pin 16). Then bridge <span class="ref">c1 r6–r8</span> together and onto <span class="ref">c2 r6</span> (U2 pin 16). The Mode button skips the board: it wires straight to SuperMini GPIO20 and GND, using the chip's built-in pull-up.</div></li>
+      <li><div><b>Underside parts, one row at a time</b>For each resistor, cap or ground post, cut the short leg to about 3 mm and bend it into an L. Stand the part on its pad and solder the foot flat so it runs onto the chip-leg pad next to it. That one joint holds the part and makes the bridge. Keep the bodies upright, tops level, and leave about 1 mm between bodies. The ground posts are resistor-leg offcuts standing in <span class="ref">c3 r2</span>, <span class="ref">c9 r3</span>, <span class="ref">c3 r7</span>, <span class="ref">c8 r7</span> and <span class="ref">c9 r8</span>. Leave each part's long top leg sticking up for now.</div></li>
+      <li><div><b>Air bus</b>Bend every top leg under U1 toward one straight bare offcut lying across them, and solder each one. Do the same under U2. Join the two buses with a short insulated wire. This whole cage is ground. <span class="warn">Watch columns 2 and 3:</span> the cap's foot (3.3 V) and the ground-post foot sit side by side there.</div></li>
+      <li class="check"><div><b>Check with no power <span class="tag">Must pass</span></b>Set the meter to beep mode. The 3.3 V pads (<span class="ref">c1 r1</span>) against the air bus must stay silent. Each button pad should read about 10 kΩ to the bus. Neighbouring button pads must not beep against each other.</div></li>
+      <li><div><b>Jumpers</b>On top, run 3.3 V from <span class="ref">c1 r3</span> to <span class="ref">c1 r6</span>. Underneath, using insulated wire soldered flat: LOAD from <span class="ref">c2 r4</span> to <span class="ref">c2 r9</span>, CLK from <span class="ref">c3 r4</span> to <span class="ref">c3 r9</span>, and the chain from <span class="ref">c9 r6</span> to <span class="ref">c8 r1</span>.</div></li>
+      <li><div><b>Off-board wires</b>The 3.3 V input and three button commons go through holes in column 1. Everything else is soldered flat onto its pad: buttons onto their chip-leg pads, DATA, LOAD and CLK, and GND onto the air bus. Pre-tin the wire tip, hold it on the pad and touch it with the iron for a second. Any extra commons go flat onto the 3.3 V pads too.</div></li>
+      <li class="check"><div><b>Power check, chips still out <span class="tag">Must pass</span></b>Battery switch OFF, then plug in USB. Put the black probe on the air bus and the red probe on <span class="ref">c2 r1</span>, then on <span class="ref">c2 r6</span>: both should read about 3.3 V. Each button pad should read 0 V released and 3.3 V pressed.</div></li>
+      <li><div><b>Chips in, then test</b>Unplug the USB. Push the chips in with the notch toward column 1, plug back in, and open <span class="ref">localhost:8765</span>.</div></li>
+    </ol>
+  </section>
+
+  <section class="cols">
+    <div>
+      <h2>To the SuperMini</h2>
+      <div class="tbl"><table id="tMcu"><thead><tr><th>Where</th><th>SuperMini pin</th><th>Signal</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div>
+      <h2>From the buttons</h2>
+      <div class="tbl"><table id="tBtn"><thead><tr><th>Button</th><th>Solder onto</th><th>Chip pin</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(()=>{
+const NC=10, NR=9, P=40, OX=250, OY=150, NS="http://www.w3.org/2000/svg";
+const VW=OX*2+(NC-1)*P, VH=OY*2+(NR-1)*P;
+let mirror=true, selNet=null, selHole=null;
+const K=(c,r)=>c+","+r, D=(c,r)=>`c${c+1} r${r+1}`;
+const X=c=>OX+(mirror?NC-1-c:c)*P, Y=r=>OY+r*P;
+const NETS={
+  GND:{name:"Ground",color:"var(--n-gnd)",desc:"The air bus: a bare wire across the tops of all the underside parts. Both chips' pin 8 and pin 15, chip 2's pin 10, every pull-down and both caps end on it."},
+  V33:{name:"3.3 V",color:"var(--n-v33)",desc:"Comes in at c1 r1. It feeds pin 16 of both chips and the button commons."},
+  LOAD:{name:"LOAD · GPIO5",color:"var(--n-load)",desc:"Pin 1 of both chips."},
+  CLK:{name:"CLK · GPIO6",color:"var(--n-clk)",desc:"Pin 2 of both chips."},
+  DATA:{name:"DATA · GPIO7",color:"var(--n-data)",desc:"Chip 1 pin 9 (QH), which goes to the SuperMini."},
+  CHAIN:{name:"Chain",color:"var(--n-chain)",desc:"Chip 2 pin 9 (QH) into chip 1 pin 10 (SER)."},
+    NC:{name:"Pin 7 (empty)",color:"var(--n-nc)",desc:"Unused output. Leave it alone."}
+};
+const net={}, info={}, bridges=[], under=[], top=[], jumpers=[], wires=[], buses=[];
+const setN=(c,r,n)=>{net[K(c,r)]=n}, add=(c,r,s)=>{(info[K(c,r)]??=[]).push(s)};
+const chips=[{id:"U1",t:0,b:3,name:"Chip 1"},{id:"U2",t:5,b:8,name:"Chip 2"}];
+const BTN={U1:{A:"UP",B:"DOWN",C:"LEFT",D:"RIGHT",E:"SELECT",F:"START",G:"L3",H:"R3"},U2:{A:"△ Triangle",B:"○ Circle",C:"✕ Cross",D:"□ Square",E:"L1",F:"R1",G:"L2",H:"R2"}};
+const TAG={UP:"▲",DOWN:"▼",LEFT:"◀",RIGHT:"▶",SELECT:"SEL",START:"STA",L3:"L3",R3:"R3","△ Triangle":"△","○ Circle":"○","✕ Cross":"✕","□ Square":"□",L1:"L1",R1:"R1",L2:"L2",R2:"R2"};
+const LET={11:"A",12:"B",13:"C",14:"D",3:"E",4:"F",5:"G",6:"H"};
+const PINL={1:"SH/LD (LOAD)",2:"CLK",7:"QH̅ output, leave empty",8:"GND",9:"QH serial out",10:"SER serial in",15:"CLK INH, to ground",16:"VCC 3.3 V"};
+const C0=1;
+let rn=1;
+const part=(arr,o)=>{arr.push(o)};
+chips.forEach((ch,ci)=>{
+  const inT=ch.t+1, inB=ch.b-1; // under-body rows next to each pin row
+  for(let i=0;i<8;i++){
+    const pt=16-i,pb=i+1;
+    add(C0+i,ch.t,`${ch.name} (${ch.id}) pin ${pt}: ${PINL[pt]||"input "+LET[pt]}`);
+    add(C0+i,ch.b,`${ch.name} (${ch.id}) pin ${pb}: ${PINL[pb]||"input "+LET[pb]}`);
+  }
+  for(const i of [2,3,4,5]){
+    const c=C0+i;
+    for(const [p,pr,rr] of [[16-i,ch.t,inT],[i+1,ch.b,inB]]){
+      const L=LET[p], b=BTN[ch.id][L], id=ch.id+L;
+      NETS[id]={name:b,color:"var(--n-btn)",desc:`${b} → ${ch.name} pin ${p} (input ${L}). The 10k pull-down keeps it at 0 V until the button connects it to 3.3 V.`,pin:`${ch.id} pin ${p} (${L})`};
+      setN(c,pr,id); setN(c,rr,id); bridges.push([c,pr,c,rr]);
+      part(under,{c,r:rr,kind:"res",label:"R"+rn,bus:ci});
+      add(c,rr,`Underside: R${rn} 10k stands here. Its foot is bridged to the chip leg, and its top leg goes to the air bus.`);
+      wires.push({c,r:pr,lap:true,tag:TAG[b],text:b,color:"var(--n-btn)",kind:"btn",net:id});
+      add(c,pr,`Solder the ${b} button wire flat onto this pad`);
+      rn++;
+    }
+  }
+  // cap at col1 under pin16, INH post col2, pin8 post col8
+  const vr=ch.t+1;
+  setN(1,ch.t,"V33"); setN(1,vr,"V33"); bridges.push([1,ch.t,1,vr]);
+  part(under,{c:1,r:vr,kind:"cap",label:"C"+(ci+1),bus:ci}); add(1,vr,`Underside: C${ci+1} 10 µF stands here. Its foot goes to pin 16 and its top leg to the air bus.`);
+  setN(2,ch.t,"GND"); setN(2,vr,"GND"); bridges.push([2,ch.t,2,vr]);
+  part(under,{c:2,r:vr,kind:"post",bus:ci}); add(2,vr,"Underside: ground post (offcut) from pin 15 up to the air bus");
+  setN(8,ch.b,"GND"); setN(8,ch.b-1,"GND"); bridges.push([8,ch.b,8,ch.b-1]);
+  part(under,{c:8,r:ch.b-1,kind:"post",bus:ci}); add(8,ch.b-1,"Underside: ground post (offcut) from pin 8 up to the air bus");
+  setN(7,ch.b,"NC");
+});
+// chip2 SER -> GND post
+setN(7,5,"GND"); setN(7,6,"GND"); bridges.push([7,5,7,6]); part(under,{c:7,r:6,kind:"post",bus:1}); add(7,6,"Underside: ground post from chip 2 pin 10 up to the air bus");
+// air buses (pass over part tops)
+buses.push([[1,1],[6,1]],[[3,2],[8,2]],[[3,1],[3,2]],[[1,6],[7,6]],[[3,7],[8,7]],[[3,6],[3,7]]);
+jumpers.push({a:[5,2],b:[5,6],net:"GND",ctrl:[5.6,4],side:"under",text:"joins the two air buses"});
+// 3.3V rails
+[[0,0],[0,1],[0,2],[0,5],[0,6],[0,7]].forEach(([c,r])=>{setN(c,r,"V33")});
+bridges.push([0,0,0,1],[0,1,0,2],[0,0,1,0],[0,5,0,6],[0,6,0,7],[0,5,1,5]);
+add(0,0,"Wire from SuperMini 3V3 (through the hole)"); add(0,1,"Button common wire (through the hole)");
+add(0,2,"Top jumper to c1 r6 (3.3 V to chip 2)"); add(0,5,"Top jumper from c1 r3"); add(0,6,"Button common wire"); add(0,7,"Button common wire");
+wires.push({c:0,r:0,text:"3V3 ← SuperMini 3V3",color:"var(--n-v33)",kind:"mcu",pin:"3V3",net:"V33",side:"left",ly:0});
+[[0,1],[0,6],[0,7]].forEach(([c,r],i)=>wires.push({c,r,text:`button common ${i+1}`,color:"var(--n-v33)",kind:"common",net:"V33",side:"left",ly:r}));
+jumpers.push({a:[0,2],b:[0,5],net:"V33",ctrl:[-0.9,3.5],side:"top"});
+// LOAD / CLK
+[[1,"LOAD","GPIO5",0.2,3],[2,"CLK","GPIO6",2.6,4]].forEach(([c,n,g,cx,ly])=>{
+  setN(c,3,n); setN(c,8,n);
+  jumpers.push({a:[c,3],b:[c,8],net:n,ctrl:[cx,5.5],side:"under"});
+  add(c,3,`Insulated wire underneath to ${D(c,8)} (${n} to chip 2)`); add(c,8,`Insulated wire from ${D(c,3)} (${n})`);
+  wires.push({c,r:3,lap:true,text:`${n} ← ${g}`,color:NETS[n].color,kind:"mcu",pin:g,net:n,side:"left",ly});
+  add(c,3,`Solder the SuperMini ${g} wire flat onto this pad`);
+});
+// DATA, chain
+setN(8,0,"DATA"); wires.push({c:8,r:0,lap:true,text:"DATA → GPIO7",color:"var(--n-data)",kind:"mcu",pin:"GPIO7",net:"DATA",side:"right",ly:0.5}); add(8,0,"Solder the GPIO7 wire flat onto this pad");
+setN(7,0,"CHAIN"); setN(8,5,"CHAIN");
+jumpers.push({a:[8,5],b:[7,0],net:"CHAIN",ctrl:[9.3,2.6],side:"under"});
+add(8,5,"Insulated wire underneath to c8 r1 (chain)"); add(7,0,"Insulated wire from c9 r6 (chain)");
+wires.push({c:8,r:2,air:true,text:"GND ← SuperMini G (onto air bus)",color:"var(--n-gnd)",kind:"mcu",pin:"G (GND)",net:"GND",side:"right",ly:1.6});
+
+const svg=document.getElementById("board"); svg.setAttribute("viewBox",`0 0 ${VW} ${VH}`);
+const el=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);(p||svg).appendChild(e);return e};
+const ncol=n=>n&&NETS[n]?NETS[n].color:"none";
+
+function draw(){
+  svg.textContent=""; const B=mirror, g={};
+  (B?["board","lead","pads","ghost","copper","under","bus","ujump","rings","tags","hl","label","hit"]:["board","lead","pads","copper","under","ghost","top","tjump","rings","tags","hl","label","hit"]).forEach(n=>g[n]=el("g",{}));
+  el("rect",{x:X(B?NC-1:0)-P*.55,y:Y(0)-P*.55,width:(NC-1)*P+P*1.1,height:(NR-1)*P+P*1.1,rx:5,fill:"var(--board)",stroke:"var(--board-edge)","stroke-width":3},g.board);
+  el("text",{x:20,y:34,fill:"var(--muted)","font-size":17,"font-weight":700},g.board).textContent=B?"BOTTOM · seen flipped over (left and right swapped)":"TOP · chip side";
+  for(let c=0;c<NC;c++)el("text",{x:X(c),y:Y(-0.95)-14,"text-anchor":"middle","font-size":12,fill:"var(--muted)","font-family":"var(--f-mono)"},g.board).textContent="c"+(c+1);
+  for(let r=0;r<NR;r++)el("text",{x:OX-P*.55-16,y:Y(r)+4,"text-anchor":"middle","font-size":12,fill:"var(--muted)","font-family":"var(--f-mono)"},g.board).textContent="r"+(r+1);
+  el("circle",{cx:X(0)+(B?P*.42:-P*.42),cy:Y(0)-P*.42,r:4,fill:"var(--silk)"},g.board);
+
+  // leaders
+  wires.filter(w=>w.side).forEach(w=>{
+    const left=(w.side==="left")!==B, sideX=w.side==="top"?X(w.c):(left?X(B?NC-1:0)-P*1.4:X(B?0:NC-1)+P*1.4);
+    const y2=w.side==="top"?Y(-1.6):Y(w.ly);
+    el("path",{d:`M ${X(w.c)} ${Y(w.r)} L ${sideX} ${y2}`,stroke:w.color,"stroke-width":2.2,fill:"none",opacity:.9},g.lead);
+    let t;
+    if(w.side==="top")t=el("text",{x:sideX+2,y:y2-4,transform:`rotate(-40 ${sideX+2} ${y2-4})`},g.label);
+    else t=el("text",{x:sideX+(left?-6:6),y:y2+5,"text-anchor":left?"end":"start"},g.label);
+    t.setAttribute("font-size",15); t.setAttribute("fill","var(--fg)"); t.setAttribute("font-weight",w.kind==="mcu"?700:600); t.textContent=w.text;
+  });
+
+  for(let c=0;c<NC;c++)for(let r=0;r<NR;r++){
+    const used=net[K(c,r)]!==undefined||info[K(c,r)];
+    el("circle",{cx:X(c),cy:Y(r),r:P*.3,fill:used?"var(--pad)":"var(--pad-dim)",opacity:used?1:.6},g.pads);
+    el("circle",{cx:X(c),cy:Y(r),r:P*.1,fill:"var(--hole)"},g.pads);
+  }
+  bridges.forEach(([c1,r1,c2,r2])=>el("line",{x1:X(c1),y1:Y(r1),x2:X(c2),y2:Y(r2),stroke:"var(--solder)","stroke-width":14,"stroke-linecap":"round",opacity:B?.95:.25,...(B?{}:{"stroke-dasharray":"2 6"})},g.copper));
+
+  // chips
+  chips.forEach(ch=>{
+    const x1=Math.min(X(1),X(8))-P*.45, y1=Y(ch.t)+P*.3, w=7*P+P*.9, h=3*P-P*.6;
+    const gp=el("g",{},B?g.ghost:g.top);
+    el("rect",{x:x1,y:y1,width:w,height:h,rx:3,fill:B?"none":"var(--chip)",stroke:B?"var(--silk)":"#000","stroke-width":B?2:1,"stroke-dasharray":B?"6 4":"0",opacity:B?.55:1},gp);
+    const nx=X(1)+(B?P*.45:-P*.45);
+    el("path",{d:`M ${nx} ${Y(ch.t+1.5)-9} A 9 9 0 0 ${B?0:1} ${nx} ${Y(ch.t+1.5)+9}`,fill:"none",stroke:B?"var(--silk)":"#666","stroke-width":2,opacity:B?.55:1},gp);
+    if(!B)el("text",{x:X(4.5),y:Y(ch.t+1.5)+5,"text-anchor":"middle","font-size":15,"font-weight":700,fill:"var(--chip-fg)","font-family":"var(--f-mono)"},gp).textContent=`${ch.id} · 74HC165`;
+    else el("text",{x:X(4.5),y:Y(ch.t)-P*.62+2,"text-anchor":"middle","font-size":11,fill:"var(--silk)","font-family":"var(--f-mono)",opacity:.8},gp);
+  });
+  // underside parts
+  under.forEach(p=>{
+    const gp=el("g",{opacity:B?1:.28},g.under);
+    const fill=p.kind==="res"?"var(--resbody)":p.kind==="cap"?"#e2a72e":"#b9bdc2";
+    el("circle",{cx:X(p.c),cy:Y(p.r),r:P*.33,fill:B?fill:"none",stroke:B?"#6d5a35":"var(--silk)","stroke-width":1.5,"stroke-dasharray":B?"0":"3 3"},gp);
+    if(B&&p.kind==="res")el("circle",{cx:X(p.c),cy:Y(p.r),r:P*.33-4,fill:"none",stroke:"#e57a1d","stroke-width":2.2},gp);
+    if(B)el("circle",{cx:X(p.c),cy:Y(p.r),r:3,fill:"#444"},gp);
+  });
+  if(B)buses.forEach(([[c1,r1],[c2,r2]])=>{
+    el("line",{x1:X(c1),y1:Y(r1),x2:X(c2),y2:Y(r2),stroke:"#5f666e","stroke-width":5,"stroke-linecap":"round","stroke-dasharray":"8 4"},g.bus);
+    el("line",{x1:X(c1),y1:Y(r1),x2:X(c2),y2:Y(r2),stroke:"#c7ccd2","stroke-width":1.5,"stroke-dasharray":"8 4"},g.bus);
+  });
+  // top resistor R17
+  top.forEach(p=>{
+    const gp=el("g",{opacity:B?.25:1},B?g.ghost:g.top);
+    el("rect",{x:X(p.c)-8,y:Y(p.a)-9,width:16,height:Y(p.b)-Y(p.a)+18,rx:8,fill:B?"none":"var(--resbody)",stroke:B?"var(--silk)":"#8a7650","stroke-width":1.4},gp);
+    if(!B)["#7b4a1e","#111","#e57a1d"].forEach((col,i)=>el("rect",{x:X(p.c)-8,y:Y(p.a)+P*.6+i*8,width:16,height:3.5,fill:col},gp));
+  });
+  // jumpers
+  jumpers.forEach(j=>{
+    const show=(j.side==="top")!==B; const grp=B?g.ujump:g.tjump;
+    const d=`M ${X(j.a[0])} ${Y(j.a[1])} Q ${X(j.ctrl[0])} ${Y(j.ctrl[1])} ${X(j.b[0])} ${Y(j.b[1])}`;
+    if(!show)return;
+    el("path",{d,fill:"none",stroke:"var(--panel)","stroke-width":8,opacity:.75},grp);
+    el("path",{d,fill:"none",stroke:ncol(j.net),"stroke-width":4.5,"stroke-linecap":"round"},grp);
+    [j.a,j.b].forEach(([c,r])=>el("circle",{cx:X(c),cy:Y(r),r:5,fill:ncol(j.net),stroke:"var(--panel)","stroke-width":1.5},grp));
+  });
+  // wire markers + tags
+  wires.forEach(w=>{
+    if(w.air||w.noRing)return;
+    if(w.lap)el("rect",{x:X(w.c)-P*.36,y:Y(w.r)-P*.36,width:P*.72,height:P*.72,fill:"none",stroke:w.color,"stroke-width":3.2,rx:2},g.rings);
+    else el("circle",{cx:X(w.c),cy:Y(w.r),r:P*.36,fill:"none",stroke:w.color,"stroke-width":3.5},g.rings);
+    if(w.tag){
+      const ty=w.r===0?Y(-0.78):w.r===8?Y(8.8):w.r===3?Y(3.52):Y(4.48);
+      el("rect",{x:X(w.c)-15,y:ty-10,width:30,height:19,rx:4,fill:"var(--panel)",stroke:"var(--n-btn)","stroke-width":1.5},g.tags);
+      el("text",{x:X(w.c),y:ty+4.5,"text-anchor":"middle","font-size":12,"font-weight":700,fill:"var(--fg)"},g.tags).textContent=w.tag;
+    }
+  });
+  if(selNet)Object.keys(net).forEach(k=>{if(net[k]!==selNet)return;const[c,r]=k.split(",").map(Number);el("circle",{cx:X(c),cy:Y(r),r:P*.45,fill:"none",stroke:"var(--accent)","stroke-width":4,class:"glow"},g.hl)});
+  if(selHole){const[c,r]=selHole;el("circle",{cx:X(c),cy:Y(r),r:P*.5,fill:"none",stroke:"var(--fg)","stroke-width":2.5,"stroke-dasharray":"4 3"},g.hl)}
+  for(let c=0;c<NC;c++)for(let r=0;r<NR;r++){
+    const h=el("circle",{cx:X(c),cy:Y(r),r:P*.48,fill:"transparent",style:"cursor:pointer"},g.hit);
+    el("title",{},h).textContent=D(c,r)+(info[K(c,r)]?": "+info[K(c,r)].join("; "):": empty");
+    h.addEventListener("click",()=>{selHole=[c,r];selNet=net[K(c,r)]||null;render()});
+  }
+}
+const infoEl=document.getElementById("info");
+function panel(){
+  let h="";
+  if(selHole){const items=info[K(...selHole)];h+=`<div class="where">${D(...selHole)}</div>`+(items?`<ul>${items.map(s=>`<li>${s}</li>`).join("")}</ul>`:`<p class="desc">Empty. Leave it free.</p>`)}
+  if(selNet){const n=NETS[selNet];h+=`<div class="net"><span class="sw" style="background:${n.color}"></span>${n.name}</div><p class="desc">${n.desc}</p>`}
+  infoEl.innerHTML=h||`<div class="where">Nothing selected</div><p class="desc">Tap a hole on the board.</p>`;
+}
+const legend=document.getElementById("legend");
+["GND","V33","LOAD","CLK","DATA","CHAIN"].forEach(id=>{const b=document.createElement("button");b.dataset.net=id;b.innerHTML=`<span class="sw" style="background:${NETS[id].color}"></span>${NETS[id].name}`;b.onclick=()=>{selNet=selNet===id?null:id;selHole=null;render()};legend.appendChild(b)});
+function render(){draw();panel();legend.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.net===selNet))}
+const vTop=document.getElementById("vTop"),vBot=document.getElementById("vBot");
+// ---------- 3D view ----------
+const box3=document.getElementById("box3"), svgBox=document.querySelector(".svgbox"), v3D=document.getElementById("v3D");
+let T3=null;
+const loadJS=src=>new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)});
+function setView(v){
+  [vTop,vBot,v3D].forEach(b=>b.setAttribute("aria-pressed",b.id===v));
+  const is3=v==="v3D"; box3.hidden=!is3; svgBox.hidden=is3;
+  if(!is3){mirror=v==="vBot";render();return}
+  if(!T3){
+    document.getElementById("msg3").textContent="Loading the 3D viewer…";
+    loadJS("https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js")
+      .then(()=>loadJS("https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"))
+      .then(()=>{T3=build3D();document.getElementById("msg3").textContent=""})
+      .catch(()=>{document.getElementById("msg3").textContent="The 3D viewer couldn't load. Check your connection and tap 3D again."});
+  } else T3.resize();
+}
+vTop.onclick=()=>setView("vTop"); vBot.onclick=()=>setView("vBot"); v3D.onclick=()=>setView("v3D");
+
+function build3D(){
+  const PT=2.54, BT=1.6, yT=BT/2, yB=-BT/2, BUSY=-9.4, LOW=-11.5;
+  const px=c=>(c-4.5)*PT, pz=r=>(r-4)*PT;
+  const host=document.getElementById("c3");
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2)); host.appendChild(renderer.domElement);
+  const scene=new THREE.Scene();
+  const cam=new THREE.PerspectiveCamera(35,1.4,1,800);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x554433,0.75));
+  const sun=new THREE.DirectionalLight(0xffffff,0.75); sun.position.set(30,60,40); scene.add(sun);
+  const sun2=new THREE.DirectionalLight(0xffffff,0.45); sun2.position.set(-30,-50,-20); scene.add(sun2);
+  const M=(color,o={})=>new THREE.MeshStandardMaterial({color,roughness:.6,metalness:0,...o});
+  const mat={board:M(0xc09257,{roughness:.85}),copper:M(0xd7955a,{metalness:.7,roughness:.35}),hole:M(0x2b1a0b),
+    solder:M(0xd4d8dc,{metalness:.9,roughness:.25}),chip:M(0x1e1f22,{roughness:.5}),socket:M(0x2c2d31),pin:M(0xc0c4c8,{metalness:.9,roughness:.3}),
+    res:M(0xd9c7a0),cap:M(0xe2a72e),brown:M(0x7b4a1e),black:M(0x111111),orange:M(0xe57a1d),gold:M(0xc9a640,{metalness:.8,roughness:.3})};
+  const NETHEX={GND:0x2a2a2a,V33:0xe0352b,LOAD:0xf08a1c,CLK:0xe9c419,DATA:0x26a24a,CHAIN:0x2f7de1};
+  const wcol=n=>NETHEX[n]??0x1fb7b7;
+  const add=(geo,m,x,y,z)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);scene.add(o);return o};
+  const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+  const rod=(a,b,r,m)=>{const d=b.clone().sub(a),L=d.length();const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,L,12),m);
+    o.position.copy(a).add(b).multiplyScalar(.5);o.quaternion.setFromUnitVectors(V(0,1,0),d.normalize());scene.add(o);return o};
+  const tube=(pts,r,color)=>{const cur=new THREE.CatmullRomCurve3(pts,false,"catmullrom",.2);
+    return add(new THREE.TubeGeometry(cur,64,r,10,false),M(color,{roughness:.45}),0,0,0)};
+  const label=(text,x,y,z,border="#1fb7b7",big=false)=>{
+    const cv=document.createElement("canvas"),ctx=cv.getContext("2d"),fs=40;ctx.font=`700 ${fs}px sans-serif`;
+    const w=Math.ceil(ctx.measureText(text).width)+28;cv.width=w;cv.height=64;
+    ctx.font=`700 ${fs}px sans-serif`;ctx.fillStyle="#fffdf8";ctx.strokeStyle=border;ctx.lineWidth=6;
+    ctx.beginPath();ctx.roundRect?ctx.roundRect(3,3,w-6,58,12):ctx.rect(3,3,w-6,58);ctx.fill();ctx.stroke();
+    ctx.fillStyle="#1b221e";ctx.textBaseline="middle";ctx.fillText(text,14,34);
+    const tex=new THREE.CanvasTexture(cv);tex.anisotropy=4;
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false}));
+    const h=big?2.4:1.8;sp.scale.set(h*w/64,h,1);sp.position.set(x,y,z);sp.renderOrder=10;scene.add(sp);labels.push(sp);return sp};
+  const labels=[];
+
+  // board, holes, pads
+  add(new THREE.BoxGeometry(10*PT,BT,9*PT),mat.board,0,0,0);
+  const holeG=new THREE.CircleGeometry(.5,16), padG=new THREE.RingGeometry(.5,1.05,20);
+  for(let c=0;c<NC;c++)for(let r=0;r<NR;r++){
+    const h1=add(holeG,mat.hole,px(c),yT+.01,pz(r));h1.rotation.x=-Math.PI/2;
+    const p=add(padG,mat.copper,px(c),yB-.01,pz(r));p.rotation.x=Math.PI/2;
+    const h2=add(holeG,mat.hole,px(c),yB-.02,pz(r));h2.rotation.x=Math.PI/2;
+  }
+  // solder joints + bridges (underside)
+  const blobG=new THREE.SphereGeometry(.95,16,10);
+  Object.keys(info).forEach(k=>{const[c,r]=k.split(",").map(Number);const b=add(blobG,mat.solder,px(c),yB-.05,pz(r));b.scale.y=.45});
+  bridges.forEach(([c1,r1,c2,r2])=>{const o=rod(V(px(c1),yB-.25,pz(r1)),V(px(c2),yB-.25,pz(r2)),.75,mat.solder);o.scale.z=.55;o.scale.x=1});
+
+  // sockets + chips
+  chips.forEach(ch=>{
+    const cz=pz((ch.t+ch.b)/2);
+    add(new THREE.BoxGeometry(20.6,2.6,9.8),mat.socket,0,yT+1.3,cz);
+    for(let i=0;i<8;i++)for(const s of [-1,1])add(new THREE.BoxGeometry(.5,2.2,.5),mat.pin,px(1+i),yT+3.3,cz+s*3.6);
+    add(new THREE.BoxGeometry(19.3,3.3,6.35),mat.chip,0,yT+2.6+1.65,cz);
+    const notch=add(new THREE.CylinderGeometry(.9,.9,.2,20),M(0x0e0e10),-9.65,yT+5.86,cz);
+    const cv=document.createElement("canvas");cv.width=512;cv.height=170;const x=cv.getContext("2d");
+    x.fillStyle="#1e1f22";x.fillRect(0,0,512,170);x.fillStyle="#e2e2e2";x.font="700 64px monospace";x.textAlign="center";
+    x.fillText("74HC165",256,80);x.font="600 42px monospace";x.fillText(ch.id+" · "+ch.name.toLowerCase(),256,140);
+    const lab=add(new THREE.PlaneGeometry(15,4.9),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv)}),0.6,yT+5.92,cz);lab.rotation.x=-Math.PI/2;
+  });
+
+  // underside standing parts
+  under.forEach(p=>{
+    const x=px(p.c),z=pz(p.r);
+    if(p.kind==="post"){rod(V(x,yB,z),V(x,BUSY,z),.28,mat.solder);return}
+    if(p.kind==="cap"){
+      rod(V(x,yB,z),V(x,-2.4,z),.25,mat.pin);
+      const d=add(new THREE.CylinderGeometry(1.9,1.9,1.1,24),mat.cap,x,-3.9,z);d.rotation.z=Math.PI/2;
+      rod(V(x,-5.4,z),V(x,BUSY,z),.25,mat.pin);return;
+    }
+    rod(V(x,yB,z),V(x,-1.7,z),.28,mat.pin);
+    add(new THREE.CylinderGeometry(1.15,1.15,6.2,18),mat.res,x,-4.8,z);
+    [[mat.brown,-2.6],[mat.black,-3.5],[mat.orange,-4.4],[mat.gold,-6.9]].forEach(([m,y])=>add(new THREE.CylinderGeometry(1.19,1.19,.5,18),m,x,y,z));
+    rod(V(x,-7.9,z),V(x,BUSY,z),.28,mat.pin);
+  });
+  // air buses
+  buses.forEach(([[c1,r1],[c2,r2]])=>rod(V(px(c1),BUSY,pz(r1)),V(px(c2),BUSY,pz(r2)),.35,mat.solder));
+
+  // jumpers
+  jumpers.forEach(j=>{
+    const a=V(px(j.a[0]),0,pz(j.a[1])),b=V(px(j.b[0]),0,pz(j.b[1])),m=V(px(j.ctrl[0]),0,pz(j.ctrl[1]));
+    if(j.side==="top"){a.y=b.y=yT;tube([a,V(a.x,yT+3,a.z),V((a.x+b.x)/2-1.5,yT+4.5,(a.z+b.z)/2),V(b.x,yT+3,b.z),b],.45,wcol(j.net));}
+    else if(j.net==="GND"){a.y=b.y=BUSY;tube([a,V((a.x+b.x)/2+.8,BUSY-1.4,(a.z+b.z)/2),b],.45,wcol(j.net));}
+    else {a.y=b.y=yB-.3;tube([a,V(a.x,LOW+1,a.z),V(m.x,LOW,m.z),V(b.x,LOW+1,b.z),b],.45,wcol(j.net));}
+  });
+
+  // off-board wires
+  const EDGE={x:14.5,z:13.2};
+  wires.forEach(w=>{
+    const x=px(w.c),z=pz(w.r),col=wcol(w.net);
+    if(w.air){const s=V(x,BUSY,z);const e=V(EDGE.x+3,BUSY-1,z);tube([s,V(x+3,BUSY-1.2,z),e],.42,col);label(w.text.replace(" (onto air bus)",""),e.x+5,e.y,e.z,"#333");return}
+    if(!w.lap){ // through hole from top, going out to the left
+      const s=V(x,yT,z),e=V(-EDGE.x-3,yT+3,z);tube([s,V(x,yT+2.4,z),V(x-2,yT+3,z),e],.42,col);
+      label(w.kind==="mcu"?"3V3 ← SuperMini":"common "+w.text.slice(-1),e.x-4.5,e.y,e.z,"#e0352b");return}
+    let dir;
+    if(w.side==="left")dir=V(-1,0,0);else if(w.side==="right")dir=V(1,0,0);else dir=V(0,0,w.r<=3?-1:1);
+    const yy=w.r===3||w.r===5?LOW-1.5-(w.c%2):LOW-.5;
+    const s=V(x,yB-.3,z), d1=V(x,yy+1,z), e=dir.x?V(dir.x*(EDGE.x+4),yy,z+(w.side==="left"?(w.c-1.5)*1.2:0)):V(x,yy,dir.z*(EDGE.z+(w.r===3||w.r===5?6:3)));
+    tube([s,d1,V((x+e.x)/2,yy,(z+e.z)/2),e],.38,col);
+    const txt=w.kind==="btn"?(w.tag||w.text):w.text;
+    label(txt,e.x+(dir.x?dir.x*5:0),e.y,e.z+(dir.z?dir.z*1.8:0),w.kind==="btn"?"#1fb7b7":"#"+col.toString(16).padStart(6,"0"));
+  });
+  label("TOP · chips",0,12,0,"#0d7656",true);
+  label("UNDERSIDE · pull-downs",0,-16.5,0,"#0d7656",true);
+
+  const ctl=new THREE.OrbitControls(cam,renderer.domElement);
+  ctl.target.set(0,-3,0); ctl.enableDamping=true; ctl.minDistance=25; ctl.maxDistance=220;
+  const views={angle:[34,28,44],top:[0,70,6],bottom:[0,-72,6],side:[0,-3,70]};
+  const go=v=>{cam.position.set(...views[v]);cam.up.set(0,1,0);ctl.update()};
+  go("angle");
+  document.querySelectorAll("[data-cam]").forEach(b=>b.onclick=()=>go(b.dataset.cam));
+  document.getElementById("lab3").onchange=e=>{labels.forEach(l=>l.visible=e.target.checked)};
+  let raf=0;
+  const loop=()=>{raf=requestAnimationFrame(loop);if(box3.hidden)return;ctl.update();renderer.render(scene,cam)};
+  const resize=()=>{const w=host.clientWidth||700,h=Math.round(Math.min(560,Math.max(360,w*.72)));renderer.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()};
+  new ResizeObserver(resize).observe(host); resize(); loop();
+  return {resize};
+}
+const tm=document.querySelector("#tMcu tbody");
+wires.filter(w=>w.kind==="mcu").forEach(w=>tm.insertAdjacentHTML("beforeend",`<tr><td><span class="ref">${w.air?"air bus":D(w.c,w.r)}</span> ${w.lap?"flat":w.air?"":"hole"}</td><td><b>${w.pin}</b></td><td><span class="sw" style="display:inline-block;vertical-align:-1px;background:${w.color}"></span> ${NETS[w.net].name}</td></tr>`));
+const tb=document.querySelector("#tBtn tbody");
+wires.filter(w=>w.kind==="btn").forEach(w=>tb.insertAdjacentHTML("beforeend",`<tr><td><b>${w.text}</b></td><td><span class="ref">${D(w.c,w.r)}</span></td><td>${NETS[w.net].pin}</td></tr>`));
+tb.insertAdjacentHTML("beforeend",`<tr><td><b>Button commons</b></td><td><span class="ref">c1 r2, r7, r8</span></td><td>3.3 V</td></tr><tr><td><b>Mode</b></td><td>not on this board</td><td>SuperMini GPIO20 + GND</td></tr>`);
+selHole=[3,1];selNet="U1D";render();
+})();
+</script>

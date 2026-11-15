@@ -1,0 +1,7 @@
+quantum_pad/build/
+__pycache__/
+*.pyc
+
+# full flash dumps hold the Bluetooth pairing keys
+backups/*/flash_full.bin
+backups/*/get_bonds.txt
