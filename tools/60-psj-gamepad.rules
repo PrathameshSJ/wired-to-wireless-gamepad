@@ -1,0 +1,4 @@
+# PSJ CUSTOM gamepad (Xbox Series X|S IDs 045E:0B13 over Bluetooth LE):
+# let the logged-in user (and Flatpak Steam) open its raw HID node, so Steam
+# can drive it as an Xbox controller instead of a generic one.
+KERNEL=="hidraw*", KERNELS=="*045E:0B13*", MODE="0660", TAG+="uaccess"

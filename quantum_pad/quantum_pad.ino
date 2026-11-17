@@ -19,6 +19,8 @@
 //   PROBE                    read GPIO20 with pull-up and pull-down: PROBE up down
 //   SAVE / DEFAULTS
 //   PAIR / TRUST / WIRED     switch link mode (same as the L1 + R1 + Mode combo)
+//   WIPE                     forget every saved device and open PAIRING (same as
+//                            holding L1 + R1 + R2 + Mode for 5 s)
 //   BONDS                    list the saved (trusted) devices
 //   FORGET                   delete every saved device
 //
@@ -71,9 +73,9 @@ const char *BTN_NAME[] = { "UP", "DOWN", "LEFT", "RIGHT", "X(south)", "O(east)",
 // Default wiring: raw shift order is chip1 H..A, then chip2 H..A.
 // Built-in defaults = the calibration saved from the wizard on 2026-11-14, so
 // DEFAULTS (or a wiped flash) lands on a working pad. Raw input 12 (wizard bar 13)
-// is unassigned, so D-pad UP has no input yet.
+// is D-pad Up, added by wiring (its wire was broken during that calibration).
 const uint8_t DEFAULT_MAP[16] = { NORTH, SOUTH, EAST, WEST, SELECT, START, L3, R3,
-                                  L1, L2, R1, R2, NONE, LEFT, RIGHT, DOWN };
+                                  L1, L2, R1, R2, UP, LEFT, RIGHT, DOWN };   // raw 12 = D-pad Up (chip 2 pin 14)
 const int16_t DEFAULT_MIN[4] = { 170, 168, 167, 167 };
 const int16_t DEFAULT_CTR[4] = { 2328, 2199, 2281, 2310 };
 const int16_t DEFAULT_MAX[4] = { 3931, 3931, 3931, 3931 };
@@ -273,6 +275,7 @@ void handleCmd(const char *l) {
   if (!strcmp(l, "PAIR"))  { setPairing(true);  return; }
   if (!strcmp(l, "TRUST")) { setPairing(false); return; }
   if (!strcmp(l, "WIRED")) { setWired(); return; }
+  if (!strcmp(l, "WIPE"))  { wipeBonds(); return; }
   if ((!strcmp(l, "BONDS") || !strcmp(l, "FORGET")) && !bleStarted) { Serial.println("ERR bluetooth is off (WIRED mode)"); return; }
   if (!strcmp(l, "BONDS")) {
     Serial.printf("BONDS %d:", NimBLEDevice::getNumBonds());
@@ -302,6 +305,7 @@ void pollSerial() {
 // ---- Link modes: TRUSTED / PAIRING ----
 const int PIN_LED = 8;                     // SuperMini blue LED, active-low (only driven after boot)
 const uint32_t PAIR_HOLD_MS = 3000;        // L1 + R1 + Mode held this long toggles the mode
+const uint32_t WIPE_HOLD_MS = 5000;        // L1 + R1 + R2 + Mode held this long forgets every device
 const uint32_t PAIR_TIMEOUT_MS = 180000;   // pairing mode gives up after 3 min with nothing connected
 const uint32_t ENCRYPT_WAIT_MS = 8000;     // a paired device encrypts within ~1 s of connecting
 bool pairingMode = false;
@@ -509,6 +513,22 @@ void setup() {
   if (usbHost) setWired(); else setPairing(false);
 }
 
+// Forget every saved device, then open PAIRING so a new one can pair straight away.
+void wipeBonds() {
+  startBle();
+  NimBLEServer *srv = NimBLEDevice::getServer();
+  for (uint16_t h : srv->getPeerDevices()) srv->disconnect(h);
+  NimBLEDevice::deleteAllBonds();
+  snapshotTrusted();
+  Serial.println("LINK all saved devices forgotten");
+  for (int i = 0; i < 3; i++) {             // three long flashes
+    digitalWrite(PIN_LED, LOW);  delay(250);
+    digitalWrite(PIN_LED, HIGH); delay(250);
+  }
+  setPairing(true);
+  excluded.clear();   // the device just dropped may pair again
+}
+
 // Next mode for the L1 + R1 + Mode combo.
 void nextLinkMode() {
   if (wiredMode) setPairing(false);                  // WIRED   -> TRUSTED
@@ -590,11 +610,18 @@ void loop() {
   // L1 + R1 + Mode held 3 s: next link mode (works connected or not).
   static uint32_t linkStart = 0;
   static bool linkDone = false;
-  if (st[L1] && st[R1] && modeOut) {
+  if (st[L1] && st[R1] && modeOut && !st[R2]) {
     if (!linkStart) linkStart = millis() | 1;
     if (!linkDone && millis() - linkStart >= PAIR_HOLD_MS) { linkDone = true; nextLinkMode(); }
   } else { linkStart = 0; linkDone = false; }
-  if (st[L1] && st[R1]) modeOut = false;   // don't send Xbox/Guide while doing the combo
+  // L1 + R1 + R2 + Mode held 5 s: forget every saved device and open pairing.
+  static uint32_t wipeStart = 0;
+  static bool wipeDone = false;
+  if (st[L1] && st[R1] && st[R2] && modeOut) {
+    if (!wipeStart) wipeStart = millis() | 1;
+    if (!wipeDone && millis() - wipeStart >= WIPE_HOLD_MS) { wipeDone = true; wipeBonds(); }
+  } else { wipeStart = 0; wipeDone = false; }
+  if (st[L1] && st[R1]) modeOut = false;   // don't send Xbox/Guide while doing a combo
 
   // Cable pulled while WIRED: the pad would be dead on battery, so go to Bluetooth.
   // isPlugged() reads false for long stretches on a healthy link, so it only counts

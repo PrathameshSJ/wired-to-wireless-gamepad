@@ -204,9 +204,40 @@ Hold **L1 + R1 + Mode for 3 seconds** to step to the next mode.
 - Plugging in USB while the pad is already running does not change the mode, so you
   can charge mid-game and stay on Bluetooth.
 - The pad remembers up to three devices. Pairing a fourth replaces the oldest.
+- To forget every saved device, hold **L1 + R1 + R2 + Mode for 5 seconds**. The LED
+  flashes three times and the pad goes straight into Pairing mode. Every device you
+  want to use again must then be removed from its Bluetooth settings and paired again.
 - Pairing mode returns to Trusted after three minutes with nothing connected.
 - To re-pair a device the pad has forgotten, first remove the pad from that device's
   Bluetooth settings.
+
+### Steam on Linux
+
+Steam recognises the pad as an Xbox Series X controller. For full support it needs
+access to the pad's raw HID device, which the Flatpak version of Steam cannot set up
+by itself. Install the included udev rule once:
+
+```sh
+sudo cp tools/60-psj-gamepad.rules /etc/udev/rules.d/
+sudo udevadm control --reload
+```
+
+Then reconnect the pad. If it still does not appear, check that Linux created it at
+all: `grep -A4 PSJ /proc/bus/input/devices` should list a `js` device.
+
+### Pairing from a Linux terminal
+
+`bluetoothctl pair` only succeeds when a pairing agent is registered. Without a desktop
+Bluetooth applet, register one in the same session:
+
+```sh
+bluetoothctl
+[bluetooth]# agent NoInputNoOutput
+[bluetooth]# default-agent
+[bluetooth]# scan le          # wait for "PSJ CUSTOM"
+[bluetooth]# pair <address shown for PSJ CUSTOM>
+[bluetooth]# trust <pad address after pairing>
+```
 
 ### Wired mode (Linux)
 
@@ -235,11 +266,13 @@ both use the same serial port.
 | Board boots into download mode | Something pulls a strapping pin (GPIO 2, 8 or 9) at power-on |
 | Pad does not appear on a phone | It is in Trusted mode. Use the combination to enter Pairing mode. |
 | A phone keeps reconnecting and dropping | The phone holds an old pairing. Remove the pad on the phone and pair again. |
+| Linux pairs but no controller appears ("Encryption required" in the `bluetooth` log) | Saved pairings on the pad are corrupted, usually after a power loss while saving. Wipe them (L1 + R1 + R2 + Mode, or `WIPE`). If `BONDS` still lists devices afterwards, erase the settings area: `esptool --chip esp32c3 erase-region 0x9000 0x5000` (the built-in calibration takes over), then pair again. |
+| `bluetoothctl pair` fails with "Authentication Failed" | No pairing agent registered. See "Pairing from a Linux terminal". |
 
 ## Firmware serial commands
 
 Over USB at 115200 baud: `GET`, `MAP`, `CAL`, `DZ`, `INV`, `MODEPOL`, `SWAP`, `PROBE`,
-`SAVE`, `DEFAULTS`, `PAIR`, `TRUST`, `WIRED`, `BONDS`, `FORGET`. They are documented at
+`SAVE`, `DEFAULTS`, `PAIR`, `TRUST`, `WIRED`, `WIPE`, `BONDS`, `FORGET`. They are documented at
 the top of `quantum_pad/quantum_pad.ino`.
 
 ## Repository layout
@@ -249,6 +282,7 @@ the top of `quantum_pad/quantum_pad.ino`.
 | `quantum_pad/` | Firmware |
 | `tools/live.py`, `tools/live.html` | Live tester and calibration wizard |
 | `tools/usb_pad.py` | Wired-mode helper for Linux |
+| `tools/60-psj-gamepad.rules` | udev rule giving Steam access to the pad |
 | `tools/perfboard_10x9.html` | 3D perfboard and wiring diagram (`perfboard_old.html` is an earlier layout) |
 | `tools/mon.py`, `tools/record.py` | Serial monitor and button-activity recorder |
 | `diagnostics/` | Bench sketches: shift-register test, pin toggler for the multimeter, stick test |
