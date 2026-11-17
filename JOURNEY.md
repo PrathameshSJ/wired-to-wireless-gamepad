@@ -81,6 +81,7 @@ Videos:
 - [Assembly in the shell](media/videos/01_assembly-in-shell.mp4) (8 s)
 - [Wiring, with the 3D perfboard diagram on screen](media/videos/02_wiring-and-3d-diagram.mp4) (27 s)
 - [Testing every input in the live tester](media/videos/03_testing-all-inputs.mp4) (64 s)
+- [Final test over Bluetooth in Steam's controller tester](media/videos/04_final-test-steam-controller-tester.mp4) (72 s)
 
 ## 5. Firmware and debugging (8 to 15 November)
 
@@ -114,3 +115,6 @@ to a reliable controller took several rounds:
 All 16 buttons, the Mode button and both analog sticks work, over Bluetooth and over
 USB. The controller pairs with phones and laptops as an Xbox controller and reconnects
 to them automatically.
+
+[Final test over Bluetooth in Steam's controller tester](media/videos/04_final-test-steam-controller-tester.mp4):
+Steam recognises it as an Xbox Series X controller.

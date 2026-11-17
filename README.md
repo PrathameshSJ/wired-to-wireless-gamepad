@@ -10,6 +10,7 @@ else is new, so the method works on almost any pad of this type, even a dead one
 
 ![Finished internals](media/photos/14_final-assembly-wiring.jpg)
 
+Video: [the finished controller in Steam's controller tester, over Bluetooth](media/videos/04_final-test-steam-controller-tester.mp4).
 The build log with photos and videos of the original conversion is in
 [JOURNEY.md](JOURNEY.md).
 
