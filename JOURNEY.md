@@ -109,8 +109,8 @@ to a reliable controller took several rounds:
 - **Wired mode.** The ESP32-C3's USB port cannot be a USB gamepad, so in wired mode the
   pad streams its state to a small Linux helper that creates a virtual Xbox 360 pad.
 
-## Status (15 November)
+## Result
 
-Every button, both sticks and the Mode button work, except D-pad Up: its wire came
-loose while the back of the shell was being screwed down. It worked before that and
-needs re-soldering.
+All 16 buttons, the Mode button and both analog sticks work, over Bluetooth and over
+USB. The controller pairs with phones and laptops as an Xbox controller and reconnects
+to them automatically.
