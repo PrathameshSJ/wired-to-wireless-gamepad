@@ -48,7 +48,7 @@ The conversion cuts the chip out of the circuit and reads the button traces dire
 The button common is connected to 3.3 V, so a pressed button reads high. Two 74HC165
 parallel-to-serial shift registers turn 16 buttons into three wires. The sticks are
 plain potentiometers read by the ESP32's ADC. The ESP32-C3 runs the firmware in
-`quantum_pad/`, which presents a standard Bluetooth HID gamepad.
+`firmware/quantum_pad/`, which presents a standard Bluetooth HID gamepad.
 
 ## Parts
 
@@ -114,7 +114,7 @@ The order of the buttons on the inputs does not matter. The calibration wizard
 detects which input is which button.
 
 An interactive 3D view of this build's perfboard layout is in
-[`tools/perfboard_10x9.html`](tools/perfboard_10x9.html) (open it in a browser).
+[`hardware/perfboard_10x9.html`](hardware/perfboard_10x9.html) (open it in a browser).
 
 ![Shift-register board](media/photos/13_shift-register-board-bottom.jpg)
 
@@ -158,14 +158,14 @@ core, and the libraries **ESP32-BLE-Gamepad 0.8.0** and **NimBLE-Arduino 2.5.1**
 
 ```sh
 FQBN=esp32:esp32:esp32c3:CDCOnBoot=cdc
-arduino-cli compile --fqbn $FQBN quantum_pad
-arduino-cli upload  --fqbn $FQBN -p /dev/ttyACM0 quantum_pad
+arduino-cli compile --fqbn $FQBN firmware/quantum_pad
+arduino-cli upload  --fqbn $FQBN -p /dev/ttyACM0 firmware/quantum_pad
 ```
 
 On Linux, if the port is not accessible, add yourself to the `uucp` (Arch) or `dialout`
 (Debian/Ubuntu) group.
 
-To rename the controller, change `PAD_NAME` in `quantum_pad/quantum_pad.ino`.
+To rename the controller, change `PAD_NAME` in `firmware/quantum_pad/quantum_pad.ino`.
 
 ## Step 7: Calibrate
 
@@ -274,20 +274,20 @@ both use the same serial port.
 
 Over USB at 115200 baud: `GET`, `MAP`, `CAL`, `DZ`, `INV`, `MODEPOL`, `SWAP`, `PROBE`,
 `SAVE`, `DEFAULTS`, `PAIR`, `TRUST`, `WIRED`, `WIPE`, `BONDS`, `FORGET`. They are documented at
-the top of `quantum_pad/quantum_pad.ino`.
+the top of `firmware/quantum_pad/quantum_pad.ino`.
 
 ## Repository layout
 
 | Path | Contents |
 |---|---|
-| `quantum_pad/` | Firmware |
+| `firmware/quantum_pad/` | Firmware |
+| `firmware/diagnostics/` | Bench sketches: shift-register test, pin toggler for the multimeter, stick test |
+| `firmware/archive/` | Earlier firmware versions and saved calibrations |
+| `hardware/perfboard_10x9.html` | 3D perfboard and wiring diagram (`perfboard_old.html` is an earlier layout) |
 | `tools/live.py`, `tools/live.html` | Live tester and calibration wizard |
 | `tools/usb_pad.py` | Wired-mode helper for Linux |
 | `tools/60-psj-gamepad.rules` | udev rule giving Steam access to the pad |
-| `tools/perfboard_10x9.html` | 3D perfboard and wiring diagram (`perfboard_old.html` is an earlier layout) |
 | `tools/mon.py`, `tools/record.py` | Serial monitor and button-activity recorder |
-| `diagnostics/` | Bench sketches: shift-register test, pin toggler for the multimeter, stick test |
-| `backups/` | Earlier firmware versions and saved calibrations |
 | `media/` | Build photos and videos |
 | `JOURNEY.md` | Build log |
 

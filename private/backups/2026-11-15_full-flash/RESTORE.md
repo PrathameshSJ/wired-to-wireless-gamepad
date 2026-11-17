@@ -18,6 +18,6 @@ It was checked against the chip (`verify-flash`, digest matched).
 
 ```sh
 ET=$(ls -d ~/.arduino15/packages/esp32/tools/esptool_py/*/esptool | head -1)
-sha256sum -c backups/2026-11-15_full-flash/flash_full.bin.sha256
-$ET --chip esp32c3 -p /dev/ttyACM0 -b 921600 write-flash 0 backups/2026-11-15_full-flash/flash_full.bin
+sha256sum -c private/backups/2026-11-15_full-flash/flash_full.bin.sha256
+$ET --chip esp32c3 -p /dev/ttyACM0 -b 921600 write-flash 0 private/backups/2026-11-15_full-flash/flash_full.bin
 ```

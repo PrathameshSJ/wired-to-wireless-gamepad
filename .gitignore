@@ -1,11 +1,8 @@
-quantum_pad/build/
+# compiler output (rebuilt on every compile)
+firmware/quantum_pad/build/
 __pycache__/
 *.pyc
 
-# full flash dumps hold the Bluetooth pairing keys
-backups/*/flash_full.bin
-backups/*/get_bonds.txt
-
-# brag video (not committed)
-brag/
-backups/*/nvs_before_erase.bin
+# private, never committed: brag videos, LinkedIn kit and flash dumps
+# (the dumps hold Bluetooth pairing keys)
+private/

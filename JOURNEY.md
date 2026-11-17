@@ -66,7 +66,7 @@ and, powered from 3.3 V, read every button as pressed. They were replaced with 7
 ## 4. Assembly (8 November)
 
 Everything was wired together and packed into the shell. An interactive 3D diagram of
-the perfboard ([`tools/perfboard_10x9.html`](tools/perfboard_10x9.html)) was used to
+the perfboard ([`hardware/perfboard_10x9.html`](hardware/perfboard_10x9.html)) was used to
 check pin numbers while soldering.
 
 ![Final assembly wiring](media/photos/14_final-assembly-wiring.jpg)
