@@ -272,7 +272,7 @@ both use the same serial port.
 
 ## Firmware serial commands
 
-Over USB at 115200 baud: `GET`, `MAP`, `CAL`, `DZ`, `INV`, `MODEPOL`, `SWAP`, `PROBE`,
+Over USB at 115200 baud (for example `python3 tools/serial_cmd.py BONDS`): `GET`, `MAP`, `CAL`, `DZ`, `INV`, `MODEPOL`, `SWAP`, `PROBE`,
 `SAVE`, `DEFAULTS`, `PAIR`, `TRUST`, `WIRED`, `WIPE`, `BONDS`, `FORGET`. They are documented at
 the top of `firmware/quantum_pad/quantum_pad.ino`.
 
@@ -287,6 +287,7 @@ the top of `firmware/quantum_pad/quantum_pad.ino`.
 | `tools/live.py`, `tools/live.html` | Live tester and calibration wizard |
 | `tools/usb_pad.py` | Wired-mode helper for Linux |
 | `tools/60-psj-gamepad.rules` | udev rule giving Steam access to the pad |
+| `tools/serial_cmd.py` | Send serial commands to the pad (`GET`, `BONDS`, `WIPE`, ...) |
 | `tools/mon.py`, `tools/record.py` | Serial monitor and button-activity recorder |
 | `media/` | Build photos and videos |
 | `JOURNEY.md` | Build log |
